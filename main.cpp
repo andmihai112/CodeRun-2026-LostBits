@@ -30,7 +30,7 @@ float dt;
 
 bool isCircleBlue{false};
 
-SDL_TimerID circleTimerID{0}
+SDL_TimerID circleTimerID{0};
 
 void initShapes() {
     rectangle.pos = glm::vec2(150.0f, 150.0f);

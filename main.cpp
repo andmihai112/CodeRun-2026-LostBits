@@ -32,8 +32,7 @@ bool isCircleBlue{false};
 
 SDL_TimerID circleTimerID{0};
 
-void initShapes() {
-    rectangle.pos = glm::vec2(150.0f, 150.0f);
+void initShapes()     rectangle.pos = glm::vec2(150.0f, 150.0f);
     rectangle.width = 50.0f;
     rectangle.height = 50.0f;
     rectangle.color = SDL_Color{255, 0, 0, 255};

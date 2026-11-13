@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/CodeRun-2026-LostBits.iml" filepath="$PROJECT_DIR$/.idea/CodeRun-2026-LostBits.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/SDL3_Project_SelfContained.iml" filepath="$PROJECT_DIR$/.idea/SDL3_Project_SelfContained.iml" />
     </modules>
   </component>
 </project>

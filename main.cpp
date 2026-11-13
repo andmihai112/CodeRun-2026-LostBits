@@ -8,6 +8,7 @@
 constexpr int WINDOW_WIDTH{640};
 constexpr int WINDOW_HEIGHT{480};
 constexpr float VELOCITY_THRESHOLD{100.0f};
+constexpr float MAX_FRAME_TIME{0.05f};
 
 //define SDL Window related variables
 SDL_Window *window{nullptr};
@@ -30,7 +31,6 @@ float dt;
 
 bool isCircleBlue{false};
 
-SDL_TimerID circleTimerID{0};
 
 void initShapes() {
     rectangle.pos = glm::vec2(150.0f, 150.0f);
@@ -46,19 +46,6 @@ void initShapes() {
     //circles.size();
 }
 
-Uint32 circleTimerCallback(void *userdata, SDL_TimerID timerID, Uint32 interval) {
-
-    if (isCircleBlue) {
-        circle.color = SDL_Color{255, 255, 0, 255};
-        isCircleBlue = false;
-    } else {
-        circle.color = SDL_Color{0, 0, 255, 255};
-        isCircleBlue = true;
-    }
-
-    return interval;
-}
-
 bool initWindow() {
     bool success{true};
 
@@ -68,7 +55,10 @@ bool initWindow() {
         success = false;
     } else {
         //Try to create the window and renderer
-        displayScale = SDL_GetDisplayContentScale(1);
+        displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+        if (displayScale <= 0.0f) {
+            displayScale = 1.0f;
+        }
 
         if (!SDL_CreateWindowAndRenderer(
             "SDL Hello World Example",
@@ -168,24 +158,23 @@ void processMovement() {
     const bool* keyboardState = SDL_GetKeyboardState(nullptr);
 
     if (keyboardState[SDL_SCANCODE_LEFT]) {
-        rectangle.pos.x -= 1.0f;
+        rectangle.pos.x -= 200.0f * dt;
     }
 
     if (keyboardState[SDL_SCANCODE_RIGHT]) {
-        rectangle.pos.x += 1.0f;
+        rectangle.pos.x += 200.0f * dt;
     }
 
     if (keyboardState[SDL_SCANCODE_UP]) {
-        rectangle.pos.y -= 1.0f;
+        rectangle.pos.y -= 200.0f * dt;
     }
 
     if (keyboardState[SDL_SCANCODE_DOWN]) {
-        rectangle.pos.y += 1.0f;
+        rectangle.pos.y += 200.0f * dt;
     }
 }
 
 void animate() {
-    glm::vec2 direction = glm::normalize(glm::vec2(mouseX, mouseY) - rectangle.pos);
     rectangle.vel += rectangle.acc * dt;
 
     if (rectangle.vel.x < -VELOCITY_THRESHOLD) {
@@ -225,9 +214,6 @@ void drawFrame() {
 }
 
 void cleanup() {
-
-    SDL_RemoveTimer(circleTimerID);
-
     //Destroy renderer
     if (renderer) {
         SDL_DestroyRenderer(renderer);
@@ -255,17 +241,29 @@ int main() {
 
     SDL_zero(currentEvent);
 
-    circleTimerID = SDL_AddTimer(2000, circleTimerCallback, nullptr);
+    Uint64 lastFrameTime = SDL_GetTicks();
+    Uint64 lastColorChange = lastFrameTime;
 
     //Game loop
     while (!quit) {
         startTime = SDL_GetTicks();
+        dt = static_cast<float>(startTime - lastFrameTime) / 1000.0f;
+        if (dt > MAX_FRAME_TIME) {
+            dt = MAX_FRAME_TIME;
+        }
+        lastFrameTime = startTime;
+
+        if (startTime - lastColorChange >= 2000) {
+            isCircleBlue = !isCircleBlue;
+            circle.color = isCircleBlue ? SDL_Color{0, 0, 255, 255} : SDL_Color{255, 255, 0, 255};
+            lastColorChange = startTime;
+        }
+
         processEvents();
         processMovement();
         animate();
         drawFrame();
-        endTime = SDL_GetTicks();
-        dt = (endTime - startTime) / 1000.0f;
+        SDL_Delay(1);
     }
 
     cleanup();

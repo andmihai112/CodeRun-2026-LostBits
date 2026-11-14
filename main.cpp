@@ -1,11 +1,15 @@
 #include <iostream>
 #include <vector>
 #include <SDL3/SDL.h>
+#include <random>
+#include <algorithm>
 #include "rectangle.h"
 
 //define window dimensions
 constexpr int WINDOW_WIDTH{700};
 constexpr int WINDOW_HEIGHT{800};
+#define green_color SDL_Color{55, 207, 54, 255}
+#define orange_color SDL_Color{250, 147, 40, 255}
 
 // Vertical scrolling grid related variables
 constexpr float VERTICAL_SCROLLING_SPEED{ 100 };
@@ -22,6 +26,26 @@ SDL_Window *window{nullptr};
 SDL_Renderer *renderer{nullptr};
 SDL_Event currentEvent;
 SDL_Color backgroundColor{255, 255, 255, 255};
+
+Rectangle player(50.f, 50.f, {WINDOW_WIDTH / 2, WINDOW_HEIGHT-50.f}, green_color);
+
+
+
+
+
+class Enemy {
+public:
+    Rectangle rect;
+    float velocity;
+    Enemy(glm::vec2 size, glm::vec2 position, SDL_Color color):
+        rect(size.x, size.y, position, color)
+    {}
+
+}   enemy1{glm::vec2(50.f, 50.f), {WINDOW_WIDTH/3, -25.f}, orange_color},
+    enemy2{glm::vec2(50.f, 50.f), {WINDOW_WIDTH/3, -25.f}, orange_color},
+    enemy3{glm::vec2(50.f, 50.f), {WINDOW_WIDTH/3, -25.f}, orange_color};
+
+
 
 bool quit{false};
 
@@ -175,6 +199,11 @@ void drawFrame() {
         gridRectangle.draw(renderer);
     }
 
+    player.draw(renderer);
+    enemy1.rect.draw(renderer);
+    enemy2.rect.draw(renderer);
+    enemy3.rect.draw(renderer);
+
     //Update window
     SDL_RenderPresent(renderer);
 }
@@ -202,6 +231,24 @@ int main() {
         std::cout << "Failed to initialize" << std::endl;
         return -1;
     }
+    std::vector<int> valori = {0, 1, 2};
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::shuffle(valori.begin(), valori.end(), gen);
+
+    enemy1.rect.pos = glm::vec2({WINDOW_WIDTH / 3*valori[0],  - 50.f});
+    enemy2.rect.pos = glm::vec2({WINDOW_WIDTH / 3*valori[1], - 50.f});
+    enemy3.rect.pos = glm::vec2({WINDOW_WIDTH / 3*valori[2],  - 50.f});
+
+    std::random_device rd1;
+    std::mt19937 gen1(rd1());
+
+    std::uniform_int_distribution<int> distrib(50, 150);
+    enemy1.velocity = distrib(gen1);
+    enemy2.velocity = distrib(gen1);
+    enemy3.velocity = distrib(gen1);
 
     SDL_zero(currentEvent);
 

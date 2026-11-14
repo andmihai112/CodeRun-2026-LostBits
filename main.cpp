@@ -1,14 +1,21 @@
 #include <iostream>
-#include <SDL3/SDL.h>
 #include <vector>
+#include <SDL3/SDL.h>
 #include "rectangle.h"
-#include "circle.h"
 
 //define window dimensions
-constexpr int WINDOW_WIDTH{640};
-constexpr int WINDOW_HEIGHT{480};
-constexpr float VELOCITY_THRESHOLD{100.0f};
-constexpr float MAX_FRAME_TIME{0.05f};
+constexpr int WINDOW_WIDTH{700};
+constexpr int WINDOW_HEIGHT{800};
+
+// Vertical scrolling grid related variables
+constexpr float VERTICAL_SCROLLING_SPEED{ 100 };
+constexpr int VERTICAL_SCROLLING_GRID_SQUARE_SIZE{ 20 };
+std::vector<Rectangle> scrollingGrid;
+
+// Animation related variables
+float DT{ 0.01f };
+Uint64 startTime{ 0 };
+Uint64 endTime{ 0 };
 
 //define SDL Window related variables
 SDL_Window *window{nullptr};
@@ -22,28 +29,28 @@ float mouseX{-1.0f}, mouseY{-1.0f};
 
 float displayScale{1.0f};
 
-Rectangle rectangle;
-Circle circle;
-std::vector<Circle> circles;
 
-Uint64 startTime, endTime;
-float dt;
+void initScollingRectangles() {
+    int numGridRectangles = (WINDOW_HEIGHT / VERTICAL_SCROLLING_GRID_SQUARE_SIZE) / 2 + 2;
 
-bool isCircleBlue{false};
+    for (int i = 0; i < numGridRectangles; i++) {
+        Rectangle newGridRectangleLeft, newGridRectangleRight;
 
+        newGridRectangleLeft.width = newGridRectangleLeft.height = VERTICAL_SCROLLING_GRID_SQUARE_SIZE;
+        newGridRectangleLeft.pos.x = newGridRectangleLeft.width / 2.0f;
+        newGridRectangleLeft.pos.y = WINDOW_HEIGHT - newGridRectangleLeft.height / 2.0f - 2.0f * i * newGridRectangleLeft.height;
+        newGridRectangleLeft.vel = glm::vec2(0.0f, VERTICAL_SCROLLING_SPEED);
+        newGridRectangleLeft.color = SDL_Color{ 235, 235, 235, 255 };
 
-void initShapes() {
-    rectangle.pos = glm::vec2(150.0f, 150.0f);
-    rectangle.width = 50.0f;
-    rectangle.height = 50.0f;
-    rectangle.color = SDL_Color{255, 0, 0, 255};
+        newGridRectangleRight.width = newGridRectangleRight.height = VERTICAL_SCROLLING_GRID_SQUARE_SIZE;
+        newGridRectangleRight.pos.x = WINDOW_WIDTH - newGridRectangleRight.width / 2.0f;
+        newGridRectangleRight.pos.y = WINDOW_HEIGHT - newGridRectangleRight.height / 2.0f - 2.0f * i * newGridRectangleRight.height;
+        newGridRectangleRight.vel = glm::vec2(0.0f, VERTICAL_SCROLLING_SPEED);
+        newGridRectangleRight.color = SDL_Color{ 235, 235, 235, 255 };
 
-    circle.pos = glm::vec2(150.0f, 350.0f);
-    circle.radius = 25.0;
-    circle.color = SDL_Color{255, 255, 0, 255};
-
-    circles.push_back(circle);
-    //circles.size();
+        scrollingGrid.push_back(newGridRectangleLeft);
+        scrollingGrid.push_back(newGridRectangleRight);
+    }
 }
 
 bool initWindow() {
@@ -55,10 +62,7 @@ bool initWindow() {
         success = false;
     } else {
         //Try to create the window and renderer
-        displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-        if (displayScale <= 0.0f) {
-            displayScale = 1.0f;
-        }
+        displayScale = SDL_GetDisplayContentScale(1);
 
         if (!SDL_CreateWindowAndRenderer(
             "SDL Hello World Example",
@@ -104,13 +108,6 @@ void processEvents() {
 
         //Mouse event -> mouse movement
         if (currentEvent.type == SDL_EVENT_MOUSE_MOTION) {
-
-            SDL_GetMouseState(&mouseX, &mouseY);
-            mouseX /= displayScale;
-            mouseY /= displayScale;
-
-            rectangle.acc = glm::vec2(mouseX, mouseY) - rectangle.pos;
-
             if (const SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState(nullptr, nullptr); mouseButtons & SDL_BUTTON_MASK(SDL_BUTTON_LEFT)) {
                 SDL_GetMouseState(&mouseX, &mouseY);
                 mouseX /= displayScale;
@@ -123,20 +120,16 @@ void processEvents() {
         if (currentEvent.type == SDL_EVENT_KEY_DOWN) {
             switch (currentEvent.key.key) {
                 case SDLK_UP:
-                    //std::cout << "UP arrow key was pressed" << std::endl;
-                    //rectangle.pos.y -= 5.0f;
+                    std::cout << "UP arrow key was pressed" << std::endl;
                     break;
                 case SDLK_DOWN:
-                    //std::cout << "DOWN arrow key was pressed" << std::endl;
-                    //rectangle.pos.y += 5.0f;
+                    std::cout << "DOWN arrow key was pressed" << std::endl;
                     break;
                 case SDLK_LEFT:
-                    //std::cout << "LEFT arrow key was pressed" << std::endl;
-                    //rectangle.pos.x -= 5.0f;
+                    std::cout << "LEFT arrow key was pressed" << std::endl;
                     break;
                 case SDLK_RIGHT:
-                    //std::cout << "RIGHT arrow key was pressed" << std::endl;
-                    //rectangle.pos.x += 5.0f;
+                    std::cout << "RIGHT arrow key was pressed" << std::endl;
                     break;
                 case SDLK_R:
                     std::cout << "R key was pressed" << std::endl;
@@ -154,48 +147,18 @@ void processEvents() {
     }
 }
 
-void processMovement() {
-    const bool* keyboardState = SDL_GetKeyboardState(nullptr);
-
-    if (keyboardState[SDL_SCANCODE_LEFT]) {
-        rectangle.pos.x -= 200.0f * dt;
-    }
-
-    if (keyboardState[SDL_SCANCODE_RIGHT]) {
-        rectangle.pos.x += 200.0f * dt;
-    }
-
-    if (keyboardState[SDL_SCANCODE_UP]) {
-        rectangle.pos.y -= 200.0f * dt;
-    }
-
-    if (keyboardState[SDL_SCANCODE_DOWN]) {
-        rectangle.pos.y += 200.0f * dt;
-    }
-}
-
 void animate() {
-    rectangle.vel += rectangle.acc * dt;
 
-    if (rectangle.vel.x < -VELOCITY_THRESHOLD) {
-        rectangle.vel.x = -VELOCITY_THRESHOLD;
+    // Scrolling grid
+    for (int i = 0; i < scrollingGrid.size(); i++) {
+        Rectangle& gridRectangle = scrollingGrid.at(i);
+
+        gridRectangle.pos += gridRectangle.vel * DT;
+
+        if (gridRectangle.pos.y > (WINDOW_HEIGHT + gridRectangle.height / 2.0f)) {
+            gridRectangle.pos.y -= gridRectangle.height * scrollingGrid.size();
+        }
     }
-
-    if (rectangle.vel.x > VELOCITY_THRESHOLD) {
-        rectangle.vel.x = VELOCITY_THRESHOLD;
-    }
-
-    if (rectangle.vel.y < -VELOCITY_THRESHOLD) {
-        rectangle.vel.y = -VELOCITY_THRESHOLD;
-    }
-
-    if (rectangle.vel.y > VELOCITY_THRESHOLD) {
-        rectangle.vel.y = VELOCITY_THRESHOLD;
-    }
-
-    rectangle.pos += rectangle.vel * dt + rectangle.acc * dt * dt / 2.0f;
-    //direction = glm::normalize(glm::vec2(mouseX, mouseY) - circle.pos);
-    //circle.pos += direction * 150.0f * dt;
 }
 
 void drawFrame() {
@@ -204,10 +167,13 @@ void drawFrame() {
     SDL_RenderClear(renderer);
 
     //Draw scene
-    rectangle.draw(renderer);
-    circle.draw(renderer);
-    SDL_SetRenderDrawColor(renderer, 0, 0,255, 255);
-    SDL_RenderLine(renderer, mouseX, mouseY, rectangle.pos.x, rectangle.pos.y);
+    
+    //Draw scrolling grid
+
+    for (int i = 0; i < scrollingGrid.size(); i++) {
+        Rectangle& gridRectangle = scrollingGrid.at(i);
+        gridRectangle.draw(renderer);
+    }
 
     //Update window
     SDL_RenderPresent(renderer);
@@ -237,33 +203,20 @@ int main() {
         return -1;
     }
 
-    initShapes();
-
     SDL_zero(currentEvent);
 
-    Uint64 lastFrameTime = SDL_GetTicks();
-    Uint64 lastColorChange = lastFrameTime;
+	initScollingRectangles();
 
     //Game loop
     while (!quit) {
         startTime = SDL_GetTicks();
-        dt = static_cast<float>(startTime - lastFrameTime) / 1000.0f;
-        if (dt > MAX_FRAME_TIME) {
-            dt = MAX_FRAME_TIME;
-        }
-        lastFrameTime = startTime;
-
-        if (startTime - lastColorChange >= 2000) {
-            isCircleBlue = !isCircleBlue;
-            circle.color = isCircleBlue ? SDL_Color{0, 0, 255, 255} : SDL_Color{255, 255, 0, 255};
-            lastColorChange = startTime;
-        }
 
         processEvents();
-        processMovement();
         animate();
         drawFrame();
-        SDL_Delay(1);
+
+        endTime = SDL_GetTicks();
+        DT = (endTime - startTime) / 1000.0f;
     }
 
     cleanup();

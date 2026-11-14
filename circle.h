@@ -7,6 +7,8 @@
 struct Circle {
     float radius;
     glm::vec2 pos;
+    glm::vec2 vel;
+    glm::vec2 acc;
     SDL_Color color;
 
     Circle();

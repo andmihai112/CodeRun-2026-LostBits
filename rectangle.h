@@ -5,6 +5,7 @@
 #include "glm/glm.hpp"
 
 struct Rectangle {
+    public:
     glm::vec2 pos;
     glm::vec2 vel;
     glm::vec2 acc;

@@ -37,11 +37,20 @@ class Enemy {
 public:
     Rectangle rect;
     float velocity;
-    Enemy(glm::vec2 size, glm::vec2 position, SDL_Color color):
-        rect(size.x, size.y, position, color)
+
+    Enemy(glm::vec2 size, glm::vec2 position, SDL_Color color, float initialVel = 100.f):
+        rect(size.x, size.y, position, color),
+        velocity(initialVel)
     {}
 
-}   enemy1{glm::vec2(50.f, 50.f), {WINDOW_WIDTH/3, -25.f}, orange_color},
+    void update(float dt) {
+        rect.pos.y += velocity * dt;
+
+        if (rect.pos.y > WINDOW_HEIGHT + rect.height) {
+            rect.pos.y = -50.f;
+        }
+    }
+} enemy1{glm::vec2(50.f, 50.f), {WINDOW_WIDTH/3, -25.f}, orange_color},
     enemy2{glm::vec2(50.f, 50.f), {WINDOW_WIDTH/3, -25.f}, orange_color},
     enemy3{glm::vec2(50.f, 50.f), {WINDOW_WIDTH/3, -25.f}, orange_color};
 
@@ -183,7 +192,12 @@ void animate() {
             gridRectangle.pos.y -= gridRectangle.height * scrollingGrid.size();
         }
     }
+
+    enemy1.update(DT);
+    enemy2.update(DT);
+    enemy3.update(DT);
 }
+
 
 void drawFrame() {
     //Clear the background
@@ -238,9 +252,9 @@ int main() {
 
     std::shuffle(valori.begin(), valori.end(), gen);
 
-    enemy1.rect.pos = glm::vec2({WINDOW_WIDTH / 3*valori[0],  - 50.f});
-    enemy2.rect.pos = glm::vec2({WINDOW_WIDTH / 3*valori[1], - 50.f});
-    enemy3.rect.pos = glm::vec2({WINDOW_WIDTH / 3*valori[2],  - 50.f});
+    enemy1.rect.pos = glm::vec2({WINDOW_WIDTH / 3*(valori[0]+0.5),  - 50.f});
+    enemy2.rect.pos = glm::vec2({WINDOW_WIDTH / 3*(valori[1]+0.5  ), - 50.f});
+    enemy3.rect.pos = glm::vec2({WINDOW_WIDTH / 3*(valori[2]+0.5  ),  - 50.f});
 
     std::random_device rd1;
     std::mt19937 gen1(rd1());
